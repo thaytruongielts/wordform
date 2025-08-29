@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bài Giảng Word Form</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        .draggable {
+            cursor: grab;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            user-select: none;
+            touch-action: none; /* Prevent browser default touch behavior */
+        }
+        .draggable:active {
+            cursor: grabbing;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transform: scale(1.1) rotate(5deg);
+        }
+        .drop-zone {
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            border-style: dashed;
+            min-height: 40px; /* Ensure drop zone is visible */
+        }
+        .drop-zone.drag-over {
+            background-color: #e2e8f0;
+            transform: scale(1.05);
+        }
+        .correct {
+            background-color: #d1fae5;
+            animation: bounce 0.5s ease;
+        }
+        .incorrect {
+            background-color: #fee2e2;
+            animation: shake 0.5s ease;
+        }
+        .correct-answer-text {
+            color: #10b981;
+            font-weight: bold;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen py-10">
+
+    <div class="bg-white rounded-3xl shadow-xl p-8 max-w-4xl mx-auto w-full">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-indigo-700">Bài Giảng Word Form</h1>
+            <p class="text-lg text-gray-600 mt-2">Kéo và thả từ đúng vào ô trống để hoàn thành 50 câu!</p>
+        </div>
+
+        <div id="exercise-container" class="space-y-8">
+            <!-- Bài tập sẽ được tạo bởi JavaScript -->
+        </div>
+
+        <div class="mt-8 text-center flex flex-col items-center space-y-4">
+            <div class="flex space-x-4">
+                <button id="check-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition transform hover:scale-105">
+                    Kiểm Tra
+                </button>
+                <button id="next-button" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition transform hover:scale-105">
+                    Câu Tiếp
+                </button>
+            </div>
+            <div id="feedback-message" class="mt-4 text-xl font-semibold"></div>
+        </div>
+    </div>
+
+    <script>
+        // Dữ liệu 50 câu hỏi bài tập Word Form
+        const exercises = [
+            { sentence: "The movie's ending was very ...", blanks: ["disappointing"], options: ["disappoint", "disappointment", "disappointing"], correct: "disappointing", explanation: "Cần một tính từ (adjective) để bổ nghĩa cho 'ending'. 'Disappointing' (gây thất vọng) được dùng cho vật, sự việc." },
+            { sentence: "His ... of the city was impressive.", blanks: ["knowledge"], options: ["know", "knowledgeable", "knowledge"], correct: "knowledge", explanation: "Cần một danh từ (noun) sau 'His' để chỉ sự sở hữu. 'Knowledge' là danh từ." },
+            { sentence: "They live in a quiet ... area.", blanks: ["residential"], options: ["reside", "resident", "residential"], correct: "residential", explanation: "Cần một tính từ (adjective) để bổ nghĩa cho 'area'. 'Residential' (thuộc về khu dân cư) là tính từ của 'reside'." },
+            { sentence: "The new product was a great ...", blanks: ["success"], options: ["succeed", "successful", "success"], correct: "success", explanation: "Cần một danh từ (noun) sau 'a great' để chỉ sự thành công. 'Success' là danh từ." },
+            { sentence: "The building was designed by a famous ...", blanks: ["architect"], options: ["architectural", "architecture", "architect"], correct: "architect", explanation: "Cần một danh từ (noun) chỉ người làm nghề đó. 'Architect' là kiến trúc sư." },
+            { sentence: "She has a very ... imagination.", blanks: ["creative"], options: ["create", "creation", "creative"], correct: "creative", explanation: "Cần một tính từ (adjective) để bổ nghĩa cho 'imagination'." },
+            { sentence: "The price of the car is ... to the quality.", blanks: ["proportional"], options: ["proportion", "proportionally", "proportional"], correct: "proportional", explanation: "Cần một tính từ (adjective) đứng sau 'to be'. 'Proportional' có nghĩa là 'tỷ lệ với'." },
+            { sentence: "He drives his car very ...", blanks: ["carefully"], options: ["careful", "carefully", "carefulness"], correct: "carefully", explanation: "Cần một trạng từ (adverb) để bổ nghĩa cho động từ 'drives'." },
+            { sentence: "We need to find a ... to this problem.", blanks: ["solution"], options: ["solve", "soluble", "solution"], correct: "solution", explanation: "Cần một danh từ (noun) sau 'a'. 'Solution' là danh từ của 'solve'." },
+            { sentence: "The company's ... has grown rapidly.", blanks: ["development"], options: ["develop", "developing", "development"], correct: "development", explanation: "Cần một danh từ (noun) làm chủ ngữ. 'Development' là danh từ của 'develop'." },
+            { sentence: "I find this book very ...", blanks: ["interesting"], options: ["interest", "interested", "interesting"], correct: "interesting", explanation: "Cần một tính từ (adjective) để bổ nghĩa cho vật, sự việc. 'Interesting' (thú vị) được dùng cho sách." },
+            { sentence: "The children were very ... to see the circus.", blanks: ["excited"], options: ["excite", "excitement", "excited"], correct: "excited", explanation: "Cần một tính từ (adjective) để diễn tả cảm xúc của người. 'Excited' (hào hứng) được dùng cho người." },
+            { sentence: "They had a strong ... of victory.", blanks: ["belief"], options: ["believe", "believable", "belief"], correct: "belief", explanation: "Cần một danh từ (noun) sau 'a strong'. 'Belief' là danh từ của 'believe'." },
+            { sentence: "This is a very ... matter.", blanks: ["sensitive"], options: ["sense", "sensible", "sensitive"], correct: "sensitive", explanation: "Cần một tính từ (adjective) để bổ nghĩa cho 'matter'. 'Sensitive' (nhạy cảm) là tính từ." },
+            { sentence: "We need more ... about the plan.", blanks: ["information"], options: ["inform", "informational", "information"], correct: "information", explanation: "Cần một danh từ (noun) sau 'more'. 'Information' là danh từ của 'inform'." },
+            { sentence: "His ... behavior surprised everyone.", blanks: ["irresponsible"], options: ["responsible", "responsibly", "irresponsible"], correct: "irresponsible", explanation: "Cần một tính từ (adjective) để bổ nghĩa cho 'behavior'. Tiền tố 'ir-' mang nghĩa phủ định." },
+            { sentence: "The patient is making a slow ...", blanks: ["recovery"], options: ["recover", "recoverable", "recovery"], correct: "recovery", explanation: "Cần một danh từ (noun) sau 'a slow'. 'Recovery' là danh từ của 'recover'." },
+            { sentence: "The project was a huge ...", blanks: ["investment"], options: ["invest", "investor", "investment"], correct: "investment", explanation: "Cần một danh từ (noun) sau 'a huge'. 'Investment' là danh từ của 'invest'." },
+            { sentence: "She spoke very ... about her experience.", blanks: ["passionately"], options: ["passion", "passionate", "passionately"], correct: "passionately", explanation: "Cần một trạng từ (adverb) để bổ nghĩa cho động từ 'spoke'." },
+            { sentence: "The new law will have a major ... on society.", blanks: ["impact"], options: ["impactful", "impacting", "impact"], correct: "impact", explanation: "Cần một danh từ (noun) sau 'a major'. 'Impact' là danh từ." },
+            { sentence: "The company offers great ... for its employees.", blanks: ["benefits"], options: ["beneficial", "benefit", "benefits"], correct: "benefits", explanation: "Cần một danh từ (noun) số nhiều sau 'great'. 'Benefits' là danh từ." },
+            { sentence: "His ... speech moved the audience.", blanks: ["motivational"], options: ["motivate", "motivation", "motivational"], correct: "motivational", explanation: "Cần một tính từ (adjective) để bổ nghĩa cho 'speech'. 'Motivational' là tính từ của 'motivate'." },
+            { sentence: "They celebrated their ... with a big party.", blanks: ["anniversary"], options: ["anniversary", "annual", "annually"], correct: "anniversary", explanation: "Cần một danh từ (noun) sau 'their'. 'Anniversary' là danh từ chỉ ngày kỷ niệm." },
+            { sentence: "The news was quite ...", blanks: ["surprising"], options: ["surprise", "surprised", "surprising"], correct: "surprising", explanation: "Cần một tính từ (adjective) để bổ nghĩa cho 'news'. 'Surprising' (gây ngạc nhiên) được dùng cho sự việc." },
+            { sentence: "We need to show more ... for others.", blanks: ["respect"], options: ["respectful", "respectable", "respect"], correct: "respect", explanation: "Cần một danh từ (noun) sau 'show more'. 'Respect' là danh từ." },
+            { sentence: "The government's ... has improved the economy.", blanks: ["policy"], options: ["politic", "political", "policy"], correct: "policy", explanation: "Cần một danh từ (noun) làm chủ ngữ. 'Policy' là danh từ." },
+            { sentence: "He is a very ... person.", blanks: ["competitive"], options: ["compete", "competition", "competitive"], correct: "competitive", explanation: "Cần một tính từ (adjective) để bổ nghĩa cho 'person'." },
+            { sentence: "The building lacks ...", blanks: ["modernity"], options: ["modern", "modernize", "modernity"], correct: "modernity", explanation: "Cần một danh từ (noun) sau 'lacks'. 'Modernity' là danh từ của 'modern'." },
+            { sentence: "The new film received a ... welcome.", blanks: ["enthusiastic"], options: ["enthuse", "enthusiasm", "enthusiastic"], correct: "enthusiastic", explanation: "Cần một tính từ (adjective) để bổ nghĩa cho 'welcome'." },
+            { sentence: "His ... is a great example for us all.", blanks: ["dedication"], options: ["dedicate", "dedicated", "dedication"], correct: "dedication", explanation: "Cần một danh từ (noun) làm chủ ngữ. 'Dedication' là danh từ của 'dedicate'." },
+            { sentence: "The city has a strong ... to the arts.", blanks: ["commitment"], options: ["commit", "committed", "commitment"], correct: "commitment", explanation: "Cần một danh từ (noun) sau 'a strong'. 'Commitment' là danh từ của 'commit'." },
+            { sentence: "The new technology is very ...", blanks: ["effective"], options: ["effect", "effectively", "effective"], correct: "effective", explanation: "Cần một tính từ (adjective) đứng sau 'to be'. 'Effective' là tính từ." },
+            { sentence: "She is a person of great ...", blanks: ["integrity"], options: ["integer", "integrated", "integrity"], correct: "integrity", explanation: "Cần một danh từ (noun) sau 'of great'. 'Integrity' là danh từ." },
+            { sentence: "The company operates in a ... market.", blanks: ["global"], options: ["globe", "globally", "global"], correct: "global", explanation: "Cần một tính từ (adjective) để bổ nghĩa cho 'market'." },
+            { sentence: "The research provides a better ... of the issue.", blanks: ["understanding"], options: ["understand", "understood", "understanding"], correct: "understanding", explanation: "Cần một danh từ (noun) sau 'a better'. 'Understanding' là danh từ của 'understand'." },
+            { sentence: "His ... was the reason for their defeat.", blanks: ["negligence"], options: ["neglect", "negligent", "negligence"], correct: "negligence", explanation: "Cần một danh từ (noun) làm chủ ngữ. 'Negligence' là danh từ của 'neglect'." },
+            { sentence: "The team's ... was excellent.", blanks: ["performance"], options: ["perform", "performer", "performance"], correct: "performance", explanation: "Cần một danh từ (noun) làm chủ ngữ. 'Performance' là danh từ của 'perform'." },
+            { sentence: "They acted with great ...", blanks: ["courage"], options: ["courageous", "courageously", "courage"], correct: "courage", explanation: "Cần một danh từ (noun) sau 'with great'. 'Courage' là danh từ." },
+            { sentence: "The student's essay showed great ...", blanks: ["originality"], options: ["origin", "original", "originality"], correct: "originality", explanation: "Cần một danh từ (noun) sau 'great'. 'Originality' là danh từ của 'original'." },
+            { sentence: "The new system is ... to use.", blanks: ["simple"], options: ["simplify", "simplicity", "simple"], correct: "simple", explanation: "Cần một tính từ (adjective) đứng sau 'to be'. 'Simple' là tính từ." },
+            { sentence: "Her ... made her popular.", blanks: ["friendliness"], options: ["friend", "friendly", "friendliness"], correct: "friendliness", explanation: "Cần một danh từ (noun) làm chủ ngữ. 'Friendliness' là danh từ của 'friendly'." },
+            { sentence: "The weather is very ... today.", blanks: ["pleasant"], options: ["please", "pleasure", "pleasant"], correct: "pleasant", explanation: "Cần một tính từ (adjective) để bổ nghĩa cho 'weather'." },
+            { sentence: "The project's ... was quite challenging.", blanks: ["completion"], options: ["complete", "completely", "completion"], correct: "completion", explanation: "Cần một danh từ (noun) làm chủ ngữ. 'Completion' là danh từ của 'complete'." },
+            { sentence: "He is known for his ... of animals.", blanks: ["love"], options: ["love", "lovely", "loving"], correct: "love", explanation: "Cần một danh từ (noun) sau 'his'. 'Love' là danh từ." },
+            { sentence: "The government has made a strong ... to reduce pollution.", blanks: ["commitment"], options: ["commit", "committed", "commitment"], correct: "commitment", explanation: "Cần một danh từ (noun) sau 'a strong'. 'Commitment' là danh từ." },
+            { sentence: "Her ... is her greatest asset.", blanks: ["kindness"], options: ["kind", "kindly", "kindness"], correct: "kindness", explanation: "Cần một danh từ (noun) làm chủ ngữ. 'Kindness' là danh từ của 'kind'." },
+            { sentence: "The teacher's ... was very helpful.", blanks: ["advice"], options: ["advise", "advisable", "advice"], correct: "advice", explanation: "Cần một danh từ (noun) làm chủ ngữ. 'Advice' là danh từ." },
+            { sentence: "The patient is making a slow ...", blanks: ["recovery"], options: ["recover", "recoverable", "recovery"], correct: "recovery", explanation: "Cần một danh từ (noun) sau 'a slow'. 'Recovery' là danh từ của 'recover'." },
+            { sentence: "The new policy will have a major ... on the economy.", blanks: ["impact"], options: ["impact", "impactful", "impacting"], correct: "impact", explanation: "Cần một danh từ (noun) sau 'a major'. 'Impact' là danh từ." },
+            { sentence: "She has a very ... approach to her problems.", blanks: ["practical"], options: ["practice", "practically", "practical"], correct: "practical", explanation: "Cần một tính từ (adjective) để bổ nghĩa cho 'approach'." },
+            { sentence: "The machine is ... to operate.", blanks: ["easy"], options: ["ease", "easily", "easy"], correct: "easy", explanation: "Cần một tính từ (adjective) đứng sau 'to be'. 'Easy' là tính từ." },
+            { sentence: "His ... of the situation was completely wrong.", blanks: ["assessment"], options: ["assess", "assessor", "assessment"], correct: "assessment", explanation: "Cần một danh từ (noun) sau 'His'. 'Assessment' là danh từ của 'assess'." },
+            { sentence: "The new rules are ... for everyone.", blanks: ["binding"], options: ["bind", "binding", "bound"], correct: "binding", explanation: "Cần một tính từ (adjective) để bổ nghĩa cho 'rules'. 'Binding' có nghĩa là 'ràng buộc'." },
+            { sentence: "The team worked ... to meet the deadline.", blanks: ["tirelessly"], options: ["tireless", "tirelessly", "tired"], correct: "tirelessly", explanation: "Cần một trạng từ (adverb) để bổ nghĩa cho động từ 'worked'." },
+            { sentence: "He is a ... of great intelligence.", blanks: ["man"], options: ["man", "manly", "manliness"], correct: "man", explanation: "Cần một danh từ (noun) chỉ người. 'Man' là danh từ." }
+        ];
+
+        let currentExerciseIndex = 0;
+        let score = 0;
+        let hasChecked = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderExercise(currentExerciseIndex);
+            document.getElementById('check-button').addEventListener('click', checkAnswer);
+            document.getElementById('next-button').addEventListener('click', nextQuestion);
+        });
+
+        function renderExercise(index) {
+            const container = document.getElementById('exercise-container');
+            container.innerHTML = '';
+            hasChecked = false;
+            document.getElementById('feedback-message').textContent = "";
+            document.getElementById('check-button').style.display = 'block';
+
+            if (index >= exercises.length) {
+                showSummary();
+                return;
+            }
+
+            const exercise = exercises[index];
+            const exerciseHTML = `
+                <div class="bg-gray-50 rounded-2xl p-6 shadow-inner">
+                    <div class="text-lg md:text-xl font-bold text-gray-700 mb-4">Câu ${index + 1} / ${exercises.length}</div>
+                    <p id="sentence-${index}" class="text-gray-800 text-lg md:text-xl leading-relaxed">
+                        ${exercise.sentence.replace('...', `<span class="drop-zone border-2 border-dashed border-gray-400 rounded-lg p-2 md:p-3 inline-block w-40 h-10 md:h-12 align-middle mx-1" data-correct="${exercise.correct}"></span>`)}
+                    </p>
+                    <div id="options-${index}" class="flex flex-wrap gap-4 mt-6 justify-center md:justify-start">
+                        ${exercise.options.sort(() => Math.random() - 0.5).map(option => `
+                            <div class="draggable bg-indigo-500 text-white font-semibold py-2 px-6 rounded-full shadow-md hover:bg-indigo-600 transition-colors" draggable="true" data-word="${option}">
+                                ${option}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div id="explanation-${index}" class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mt-4 hidden rounded-lg">
+                    <p class="font-bold">Giải thích:</p>
+                    <p>${exercise.explanation}</p>
+                </div>
+            `;
+            container.innerHTML = exerciseHTML;
+
+            addEventListenersForDragAndDrop();
+        }
+
+        function addEventListenersForDragAndDrop() {
+            const draggables = document.querySelectorAll('.draggable');
+            const dropZones = document.querySelectorAll('.drop-zone');
+
+            draggables.forEach(draggable => {
+                draggable.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', e.target.dataset.word);
+                    e.target.classList.add('opacity-50');
+                });
+                draggable.addEventListener('dragend', (e) => {
+                    e.target.classList.remove('opacity-50');
+                });
+                
+                // Add touch events for mobile
+                draggable.addEventListener('touchstart', (e) => {
+                    const touch = e.touches[0];
+                    draggable.dataset.touchX = touch.clientX;
+                    draggable.dataset.touchY = touch.clientY;
+                    draggable.classList.add('opacity-50');
+                });
+
+                draggable.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const diffX = touch.clientX - draggable.dataset.touchX;
+                    const diffY = touch.clientY - draggable.dataset.touchY;
+                    draggable.style.transform = `translate(${diffX}px, ${diffY}px)`;
+                });
+
+                draggable.addEventListener('touchend', (e) => {
+                    draggable.style.transform = 'translate(0, 0)';
+                    draggable.classList.remove('opacity-50');
+                    const touch = e.changedTouches[0];
+                    const dropZone = document.elementFromPoint(touch.clientX, touch.clientY).closest('.drop-zone');
+
+                    if (dropZone && dropZone.children.length === 0) {
+                        const word = draggable.dataset.word;
+                        const newElement = document.createElement('div');
+                        newElement.className = "text-center w-full h-full flex items-center justify-center text-gray-900 font-bold";
+                        newElement.textContent = word;
+                        newElement.dataset.word = word;
+                        dropZone.appendChild(newElement);
+                        draggable.style.display = 'none';
+                    }
+                });
+            });
+
+            dropZones.forEach(zone => {
+                zone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    zone.classList.add('drag-over');
+                });
+                zone.addEventListener('dragleave', () => {
+                    zone.classList.remove('drag-over');
+                });
+                zone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const data = e.dataTransfer.getData('text/plain');
+                    const droppedWordElement = document.querySelector(`.draggable[data-word="${data}"]`);
+                    
+                    if (zone.children.length === 0) {
+                        const newElement = document.createElement('div');
+                        newElement.className = "text-center w-full h-full flex items-center justify-center text-gray-900 font-bold";
+                        newElement.textContent = data;
+                        newElement.dataset.word = data;
+                        zone.appendChild(newElement);
+                        droppedWordElement.style.display = 'none';
+                    }
+                    zone.classList.remove('drag-over');
+                });
+            });
+        }
+
+        function checkAnswer() {
+            const dropZone = document.querySelector('.drop-zone');
+            const droppedWordElement = dropZone.querySelector('div');
+            const feedbackMessage = document.getElementById('feedback-message');
+            const explanationDiv = document.getElementById(`explanation-${currentExerciseIndex}`);
+
+            if (hasChecked) {
+                feedbackMessage.textContent = "Bạn đã kiểm tra câu này. Vui lòng nhấn 'Câu Tiếp' để chuyển câu.";
+                feedbackMessage.className = "mt-4 text-xl font-semibold text-gray-600";
+                return;
+            }
+
+            if (!droppedWordElement) {
+                feedbackMessage.textContent = "Vui lòng kéo một từ vào ô trống!";
+                feedbackMessage.className = "mt-4 text-xl font-semibold text-red-600";
+                return;
+            }
+
+            const droppedWord = droppedWordElement.dataset.word;
+            const correctWord = dropZone.dataset.correct;
+
+            if (droppedWord === correctWord) {
+                score++;
+                dropZone.classList.add('correct');
+                dropZone.classList.remove('incorrect');
+                feedbackMessage.textContent = "Chính xác! 🎉";
+                feedbackMessage.className = "mt-4 text-xl font-semibold text-green-600";
+                explanationDiv.classList.remove('hidden');
+                hasChecked = true;
+            } else {
+                dropZone.classList.add('incorrect');
+                dropZone.classList.remove('correct');
+                feedbackMessage.textContent = "Chưa chính xác. Thử lại nhé! 🤔";
+                feedbackMessage.className = "mt-4 text-xl font-semibold text-red-600";
+                explanationDiv.classList.remove('hidden');
+                const optionsContainer = document.getElementById(`options-${currentExerciseIndex}`);
+                const draggableElements = optionsContainer.querySelectorAll('.draggable');
+                draggableElements.forEach(el => el.style.display = 'block');
+                dropZone.innerHTML = '';
+            }
+        }
+        
+        function nextQuestion() {
+            if (currentExerciseIndex < exercises.length - 1) {
+                currentExerciseIndex++;
+                renderExercise(currentExerciseIndex);
+            } else {
+                showSummary();
+            }
+        }
+
+        function showSummary() {
+            const container = document.getElementById('exercise-container');
+            container.innerHTML = `
+                <div class="text-center text-3xl md:text-4xl font-extrabold text-green-700">
+                    <p>Hoàn thành! 🎉</p>
+                    <p class="mt-4">Tổng kết kết quả của bạn:</p>
+                    <p class="mt-2 text-indigo-600">${score} / ${exercises.length}</p>
+                </div>
+            `;
+            document.getElementById('check-button').style.display = 'none';
+            document.getElementById('next-button').style.display = 'none';
+            document.getElementById('feedback-message').textContent = "";
+        }
+    </script>
+</body>
+</html>
